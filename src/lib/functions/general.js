@@ -23,3 +23,56 @@ export const getAllDocsFromColl = async(coll) => {
         })
     }
 }
+
+
+export const getCollFromColl = async (coll) => {
+
+    const querySnapshot = await getDocs(collection(db(), (Array.isArray(coll))? coll.join('') : coll));
+    let alldocs = []
+    querySnapshot.forEach((doc) => {
+        
+        alldocs.push({ref:doc.ref, ...doc.data()})
+    });
+
+    if(alldocs.length == querySnapshot.length)
+    {
+        // console.log('X-alldocs :>> ', alldocs);
+        return alldocs
+    }else{
+        return new Promise((res, rej)=>{
+            setTimeout(() => {
+        // console.log('alldocs :>> ', alldocs);
+
+                res(alldocs)
+            }, 1000);
+        })
+    }
+}
+export const getDocByRef = async(docRef) => {
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+    return {ref:docSnap, ...docSnap.data()}
+    } else {
+    // docSnap.data() will be undefined in this case
+    console.log("No such document!");
+    }
+}
+
+export const addCollectionDoc = async(coll, data) => {
+     
+    let boobs =  {
+        bibs:"green", name: data.teamName,
+        capitan:{name:data.name, refs:data.refs},
+        players:[ {name:data.name, refs:data.refs}]
+    }
+
+    
+    await addDoc(collection(db(), (Array.isArray(coll))? coll.join('') : coll), 
+   boobs)
+    .then((result) => {
+        // alert("added" + result.id)
+    }).catch((err) => {
+        alert("err "+ err)
+    });
+}
