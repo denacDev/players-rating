@@ -1,6 +1,6 @@
 <script>
     import {browser } from '$app/environment'
-    import {  getCollFromColl , getDocByRef,   addCollectionDoc} from "$lib/functions/general"
+    import {  getCollFromColl , getDocByRef,   addNewRating, editExistingRating} from "$lib/functions/general"
     import { loggedUser, selectedGroupId, members, selectedMember} from "$lib/stores/generalStores"
     
     export let data;
@@ -48,8 +48,8 @@
     }
 
     const handleGetMemberRating = async(memberRef) => {
-        await getCollFromColl(["groups/", $selectedGroupId, "/members/", memberRef.id, "/rating"]).then((result)=>{
-            $selectedMember.rating = result;
+        await getCollFromColl(["groups/", $selectedGroupId, "/members/", memberRef.id, "/ratings"]).then((result)=>{
+            $selectedMember.ratings = result;
         })
     }
 
@@ -68,8 +68,9 @@
         if(loggedUserObj.length > 0)
         {
 
-            newRating = {
-                stars:chosenVote,
+
+                newRating = {
+                stars:Number(chosenVote),
                 vote_date:new Date(),
                 voter:{
                     name: $loggedUser?.name,
@@ -79,14 +80,82 @@
                     }
                 }
             }
+
+            if($selectedMember.ratings.length > 0)
+            {
+                let existentRating =false;
+                // check if the logged user has rated before, 
+                $selectedMember.ratings.forEach((rating)=>{
+                console.log('rating :>> ', rating);
+                if(rating.voter.refs.usr_ref.id == $loggedUser.uid){
+                    //logged user voted before
+                    console.log("🟡 logged user voted before");
+
+                    // check if the rating changed
+                    if (rating.stars == chosenVote){
+                        //same rating , do nothing
+                        alert("why vote same no of ⭐⭐⭐  ?")
+                    }
+                    else{
+                        // different rating, change rating in db in the same colldoc
+                        editExistingRating(rating.ref, newRating)
+                    }
+                }else{
+                    //logged user never voted before
+                    console.log("🟢 logged user never voted");
+                }
+            })
+
+                //if the logged user has rated before, adjust just the rating, do not create a new document
+            }
+            else{
+                // no ratings, just add to db
+                addNewRating(["groups/",$selectedGroupId,"/members/", $selectedMember.ref.id, "/ratings"],  newRating)
+            }
+
+           
+
+            // if (existentRating != false)
+                // {
+                //     console.log("already voted, changing only the stars");
+
+                //     console.log('existentRating.stars != Number(chosenVote) :>> ', existentRating, Number(chosenVote));
+                //     if(existentRating.stars != Number(chosenVote))
+                //     {
+                //         newRating = {
+                //             stars:Number(chosenVote),
+                //             vote_date:new Date(),
+                //             voter:{
+                //                 name: $loggedUser?.name,
+                //                 refs:{
+                //                     usr_ref:loggedUserObj[0].usr_ref,
+                //                     mem_ref:loggedUserObj[0].ref
+                //                 }
+                //             }
+                //         }
+                //         //addCollectionDoc(["groups/",$selectedGroupId,"/members/", $selectedMember.ref.id, "/ratings"],  newRating)
+                //     }
+                //     else{
+                //         alert("why vote same no of ⭐ 😜?")
+                //     }
+                // }
+                // else{
+                //     console.log("already voted, changing just the vote");
+                // }
+
+            
           
-                        
+               
+            
+        }else{
+            console.error("😡 user not logged in");
+            console.log('newRating :>> ', newRating);
+            console.log('loggedUserObj :>> ', loggedUserObj);
         }
 
          
-       //TODO:: ADD VOTE TO DB
+        
 
-        //addCollectionDoc(["groups/",$selectedGroupId,"/members/", $selectedMember.ref.id, "/ratings"],  )
         // await addMemberVote($selectedMember, chosenVote, $loggeduser)
     }
     $: chosenMember = null;
@@ -142,19 +211,24 @@
     <!-- VIEW VOTES -->
     <fieldset>
         <legend>votes</legend>
-        {#if $selectedGroupId != null && $selectedMember != null}
-            {#if $selectedMember?.rating != undefined && $selectedMember.rating.length > 0}
-             
-                    {#each $selectedMember.rating as rating}
-                        <!-- name -->
-                        {rating.voter.name} - 
-                        <!-- stars -->
-                        {#each {length:rating.stars} as _, i }
-                                ⭐
-                        {/each} - 
-                        <!-- date -->
-                        { rating.vote_date.toDate()}
+        <div class="votes">
 
+        {#if $selectedGroupId != null && $selectedMember != null}
+            {#if $selectedMember?.ratings != undefined && $selectedMember.ratings.length > 0}
+             
+                    {#each $selectedMember.ratings as rating}
+                        <div class="vote">
+
+                            <!-- name -->
+                            {rating.voter.name} - 
+                            <!-- stars -->
+                            {#each {length:rating.stars} as _, i }
+                            ⭐
+                            {/each} - 
+                            <!-- date -->
+                            { rating.vote_date.toDate()}
+                            
+                        </div>
                     {/each}
 
             {:else}
@@ -163,6 +237,8 @@
         {:else}
             Please chose a member
         {/if}
+    </div>
+
     </fieldset>
 
     <!-- ADD VOTE -->
@@ -188,3 +264,9 @@
     {/if}
 </fieldset>
 {/if}
+
+
+<style>
+    .votes{ }
+    .vote{ margin: 10px; }
+</style>

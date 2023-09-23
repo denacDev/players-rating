@@ -4,15 +4,21 @@ import {  onSnapshot, collection, getDocs, getDoc, doc ,setDoc,addDoc, deleteDoc
 
 
 export const getAllDocsFromColl = async(coll) => {
-    
-    const querySnapshot = await getDocs(collection(db(),coll));
+    let qsLen = null;
     let alldocs = []
-    querySnapshot.forEach((doc) => {
-      // doc.data() is never undefined for query doc snapshots
-      alldocs.push({id:doc.ref.id, data:doc.data()});
+    const unsubscribe = onSnapshot(collection(db(),(Array.isArray(coll))? coll.join('') : coll), (querySnapshot) => {
+
+        qsLen = querySnapshot.size
+        querySnapshot.forEach((doc) => {
+          // doc.data() is never undefined for query doc snapshots
+          alldocs.push({id:doc.ref.id, data:doc.data()});
+        });
+
+
+
     });
     
-    if(alldocs.length == querySnapshot.length)
+    if(alldocs.length == qsLen)
     {
         return alldocs
     }else{
@@ -30,7 +36,6 @@ export const getCollFromColl = async (coll) => {
     const querySnapshot = await getDocs(collection(db(), (Array.isArray(coll))? coll.join('') : coll));
     let alldocs = []
     querySnapshot.forEach((doc) => {
-        
         alldocs.push({ref:doc.ref, ...doc.data()})
     });
 
@@ -60,19 +65,40 @@ export const getDocByRef = async(docRef) => {
 }
 
 export const addCollectionDoc = async(coll, data) => {
-     
-    let boobs =  {
-        bibs:"green", name: data.teamName,
-        capitan:{name:data.name, refs:data.refs},
-        players:[ {name:data.name, refs:data.refs}]
-    }
+ 
+    
 
     
-    await addDoc(collection(db(), (Array.isArray(coll))? coll.join('') : coll), 
-   boobs)
+    await addDoc(collection(db(), (Array.isArray(coll))? coll.join('') : coll), data)
     .then((result) => {
-        // alert("added" + result.id)
+       console.log('result :>> ', result);
     }).catch((err) => {
         alert("err "+ err)
     });
 }
+
+
+
+export const addNewRating = async(coll, data ) => {
+    
+    try {
+        await addDoc(collection(db(), (Array.isArray(coll))? coll.join('') : coll), data)
+    } catch (error) {
+        console.log('error@ratePlayer :>> ', error);
+    }
+   
+}
+export const editExistingRating = async(docRef, data ) => {
+    
+    try {
+        setDoc(docRef, data, { merge: true });
+    } catch (error) {
+        console.log('error@ratePlayer :>> ', error);
+    }
+   
+}
+
+
+
+
+// new
